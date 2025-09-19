@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>JEE PCM — Ultimate Progress Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#081423; --card:#0b1220; --muted:#9aa7bd; --text:#e6eef8;
+  --accent:#7c3aed; --accent2:#06b6d4; --accent3:#facc15;
+  --ok:#22c55e; --bad:#ef4444;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:linear-gradient(180deg,#041021 0%,var(--bg) 60%);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial}
+.app{display:flex;height:100vh;gap:12px;padding:14px}
+/* sidebars */
+.sidebar{width:280px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;overflow:auto}
+.sidehead{font-weight:700;color:var(--accent);text-align:center;margin-bottom:8px}
+.search{display:flex;gap:8px;margin-bottom:8px}
+.search input{flex:1;padding:8px;border-radius:8px;border:none;background:#071227;color:var(--muted)}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;justify-content:center}
+.btn{background:var(--accent);border:none;color:white;padding:8px 10px;border-radius:8px;cursor:pointer}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+.subject{margin-bottom:8px}
+.subject-title{display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01)}
+.subject-title:hover{background:rgba(255,255,255,0.02)}
+.chapters{overflow:hidden;max-height:0;transition:max-height .35s ease,opacity .28s linear;opacity:0}
+.chapters.open{max-height:1200px;opacity:1}
+.chapter-row{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;margin:6px 0;background:rgba(255,255,255,0.01);cursor:pointer;transition:background .15s,transform .12s}
+.chapter-row:hover{background:rgba(255,255,255,0.03);transform:translateY(-2px)}
+.chapter-row.weak{background:linear-gradient(90deg, rgba(252,204,21,0.06), rgba(255,255,255,0.01))}
+.chapter-title{font-weight:600;color:var(--text);font-size:14px}
+.pill{min-width:48px;text-align:center;padding:4px 8px;border-radius:8px;background:rgba(255,255,255,0.02);color:var(--text);font-size:13px}
+/* main area */
+.main{flex:1;overflow:auto;padding:8px}
+header{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;margin-bottom:8px}
+header h1{margin:0;font-size:20px;font-weight:800}
+.quote{color:var(--accent);font-weight:600}
+.topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));padding:12px;border-radius:12px}
+.muted{color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 360px;gap:12px;margin-top:12px}
+.card{background:var(--card);border-radius:12px;padding:12px}
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.chart-box{background:rgba(255,255,255,0.01);border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:180px}
+canvas{max-width:260px;max-height:260px}
+.small{font-size:13px;color:var(--text);font-weight:600}
+/* selected panel */
+#selectedArea{min-height:240px;transition:opacity .35s ease,transform .35s ease}
+.sel-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tasks-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+.task{display:flex;flex-direction:column;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02)}
+textarea{width:100%;height:110px;margin-top:10px;padding:8px;border-radius:8px;background:#071227;color:var(--text);border:none;resize:vertical}
+.savebtn{background:var(--accent);border:none;color:white;padding:8px 10px;border-radius:8px;cursor:pointer;margin-top:8px}
+footer{text-align:center;color:var(--muted);margin-top:12px}
+/* responsive */
+@media (max-width:1180px){ .app{flex-direction:column} .sidebar{width:100%;height:auto} .grid{grid-template-columns:1fr} canvas{max-width:90%} }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar Class 11 -->
+  <aside class="sidebar" id="sidebar11">
+    <div class="sidehead">Class 11 — Chapters</div>
+    <div class="search"><input id="q11" placeholder="Search chapter..." /><button class="btn ghost" id="clear11">Clear</button></div>
+    <div class="filters"><button class="btn" id="showAll11">Show All</button><button class="btn ghost" id="showWeak11">Show Weak</button></div>
+    <div id="list11"></div>
+  </aside>
+  <!-- Sidebar Class 12 -->
+  <aside class="sidebar" id="sidebar12">
+    <div class="sidehead">Class 12 — Chapters</div>
+    <div class="search"><input id="q12" placeholder="Search chapter..." /><button class="btn ghost" id="clear12">Clear</button></div>
+    <div class="filters"><button class="btn" id="showAll12">Show All</button><button class="btn ghost" id="showWeak12">Show Weak</button></div>
+    <div id="list12"></div>
+  </aside>
+  <!-- Main -->
+  <main class="main">
+    <header>
+      <h1>JEE PCM — Ultimate Progress Tracker</h1>
+      <div class="quote">"IT'S NOT ABOUT THE END RESULT, IT'S ABOUT THE JOURNEY"</div>
+      <div class="muted">All-in-one tracker: progress, PYQs, DPPs, notes, question practice.</div>
+    </header>
+
+<div class="topbar card">
+  <div>
+    <div class="small">Countdown</div>
+    <div style="font-size:24px;font-weight:700" id="countdown">— days</div>
+    <div class="small">Selected exam:
+      <select id="examSelect" style="background:#071227;color:var(--text);border-radius:6px;padding:6px;border:none">
+        <option value="2027-05-10">JEE Advanced (May 10, 2027)</option>
+        <option value="2027-01-10">JEE Main (Jan 10, 2027)</option>
+      </select>
+    </div>
+  </div>
+  <div style="min-width:240px;text-align:right">
+    <div class="small">Overall progress</div>
+    <div style="font-weight:700;font-size:18px" id="overallPercent">0% complete</div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="charts-grid">
+      <div class="chart-box">
+        <div class="small">Class 11 Overall</div>
+        <div style="height:160px;width:160px"><canvas id="class11Chart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="small">Class 12 Overall</div>
+        <div style="height:160px;width:160px"><canvas id="class12Chart"></canvas></div>
+      </div>
+      <div class="chart-box" style="grid-column:1 / -1">
+        <div style="display:flex;justify-content:space-between;align-items:center;width:100%;gap:12px">
+          <div class="small">Chapter-wise progress (choose subject)</div>
+          <select id="subjectSelect" style="background:#071227;color:var(--text);border-radius:6px;padding:6px;border:none"></select>
+        </div>
+        <div style="width:100%;height:260px;margin-top:8px"><canvas id="chapterBar"></canvas></div>
+      </div>
+      <div class="chart-box" style="grid-column:1 / -1">
+        <div class="small">Task completion counts</div>
+        <div style="width:100%;height:220px;margin-top:8px"><canvas id="taskBar"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="selectedCard">
+    <div class="sel-header">
+      <strong>Selected chapter</strong>
+      <div class="small" id="selectedMeta">None</div>
+    </div>
+
+    <div id="selectedArea" style="margin-top:12px;opacity:0;transform:translateY(8px)">
+      <div class="small">Click a chapter in sidebars to view checklist & notes.</div>
+    </div>
+  </div>
+</div>
+
+<footer>Made by ARITRA</footer>
+</main>
+</div>
+
+<script>
+/* ---------- SYLLABUS ---------- */
+const SYLLABUS = {
+'Class 11 Physics':[ 'Unit and dimensions','Motion in 1d','Motion in 2d','Nlm and friction','Work power energy','Circular motion','Center of mass','Rotation','Gravitation','Properties of solid','Thermodynamics','KTG','Oscillation','Waves','Fluid mechanics' ],
+'Class 11 Chemistry':[ 'Mole concept','Structure of Atom','Periodic table','Chemical bonding','GOC','Hydrocarbon','Chemistry equilibrium','Ionic equilibrium','Thermodynamics','Hydrogen','Sblock','Surface chemistry','Redox reaction' ],
+'Class 11 Mathematics':[ 'Sets','Trigonometric functions','Trigonometric functions (inverse)','Quadratic equation','Complex number','Sequence and series','Binomial theorem','Limits','Straight lines','Circle','Parabola','Ellipse','Hyperbola','Permutations and Combinations' ],
+'Class 12 Physics':[ 'Electric charges and field','Electrostatic Potential and capacitance','Current electricity','Moving Charges and Magnetism','Magnetism and Matter','Electromagnetic Induction','Alternating current','Electromagnetic waves','Ray optics and optical Instruments','Wave optics','Dual nature of Radiation and Matter','Atoms','Nuclei','Semiconductor Electronics' ],
+'Class 12 Chemistry':[ 'Solutions','Electrochemistry','Chemical Kinetics','D and F block element','Coordination compound','Haloalkenes and Haloarenes','Alcohol, Phenol and Ethers','Aldehydes, Ketones and Carboxylic Acid','Amines','Biomolecules' ],
+'Class 12 Mathematics':[ 'Relation and functions','Inverse trigometric Functions','Matrices','Determinants','Continuity and Differentiability','Application of Derivatives','Integrals','AP & Integrals','Differential equations','Vectors','3D Geometry','Linear Programming','Probability' ]
+};
+function makeChapter(name){ return {name, tasks:{pyq:false,dpp:false,lectures:false,practice:false,notes:false}, notes:'', weak:false} }
+
+/* ---------- STATE ---------- */
+const STORAGE_KEY = 'jee_pcm_tracker_v3';
+let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || {subjects:{}};
+for(const s in SYLLABUS) if(!state.subjects[s]) state.subjects[s] = SYLLABUS[s].map(makeChapter);
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+/* ---------- DOM refs ---------- */
+const list11 = document.getElementById('list11'); const list12 = document.getElementById('list12');
+const q11 = document.getElementById('q11'); const q12 = document.getElementById('q12');
+const clear11 = document.getElementById('clear11'); const clear12 = document.getElementById('clear12');
+const showAll11 = document.getElementById('showAll11'); const showAll12 = document.getElementById('showAll12');
+const showWeak11 = document.getElementById('showWeak11'); const showWeak12 = document.getElementById('showWeak12');
+let selected = {subj:null, idx:null};
+
+/* ---------- RENDER SIDEBARS ---------- */
+function renderSidebar(listEl, prefix, filterText=''){
+  listEl.innerHTML = '';
+  Object.keys(state.subjects).forEach(subj=>{
+    if(!subj.startsWith(prefix)) return;
+    const subjDiv = document.createElement('div'); subjDiv.className='subject';
+    const header = document.createElement('div'); header.className='subject-title';
+    header.innerHTML = `<span>${subj.replace(prefix+' ','')}</span><span class="small">▼</span>`;
+    subjDiv.appendChild(header);
+    const chapterWrap = document.createElement('div'); chapterWrap.className='chapters';
+    state.subjects[subj].forEach((ch,i)=>{
+      if(filterText && !ch.name.toLowerCase().includes(filterText)) return;
+      const row = document.createElement('div'); row.className = 'chapter-row' + (ch.weak ? ' weak' : '');
+      row.innerHTML = `<div class="chapter-title">${ch.name}</div><div class="pill">${Math.round((Object.values(ch.tasks).filter(Boolean).length/5)*100)}%</div>`;
+      row.addEventListener('click',()=>{ selectChapter(subj,i); });
+      chapterWrap.appendChild(row);
+    });
+    header.addEventListener('click',()=>{ chapterWrap.classList.toggle('open'); });
+    subjDiv.appendChild(chapterWrap); listEl.appendChild(subjDiv);
+  });
+}
+function renderAllSidebars(){ renderSidebar(list11,'Class 11', q11.value.trim().toLowerCase()); renderSidebar(list12,'Class 12', q12.value.trim().toLowerCase()); }
+
+/* SEARCH & CONTROLS */
+q11.addEventListener('input', ()=> renderSidebar(list11,'Class 11', q11.value.trim().toLowerCase()));
+q12.addEventListener('input', ()=> renderSidebar(list12,'Class 12', q12.value.trim().toLowerCase()));
+clear11.addEventListener('click', ()=> { q11.value=''; renderSidebar(list11,'Class 11'); });
+clear12.addEventListener('click', ()=> { q12.value=''; renderSidebar(list12,'Class 12'); });
+showAll11.addEventListener('click', ()=> renderSidebar(list11,'Class 11'));
+showAll12.addEventListener('click', ()=> renderSidebar(list12,'Class 12'));
+showWeak11.addEventListener('click', ()=> showWeak('Class 11'));
+showWeak12.addEventListener('click', ()=> showWeak('Class 12'));
+function showWeak(prefix){
+  const container = (prefix==='Class 11') ? list11 : list12;
+  container.innerHTML='';
+  Object.keys(state.subjects).forEach(subj=>{
+    if(!subj.startsWith(prefix)) return;
+    const subjDiv = document.createElement('div'); subjDiv.className='subject';
+    subjDiv.innerHTML = `<div style="font-weight:700;color:var(--muted);margin:6px 0">${subj.replace(prefix+' ','')}</div>`;
+    let any=false;
+    state.subjects[subj].forEach((ch,i)=>{
+      if(ch.weak){ any=true;
+        const row=document.createElement('div'); row.className='chapter-row weak';
+        row.innerHTML=`<div class="chapter-title">${ch.name}</div><div class="pill">${Math.round((Object.values(ch.tasks).filter(Boolean).length/5)*100)}%</div>`;
+        row.addEventListener('click',()=> selectChapter(subj,i));
+        subjDiv.appendChild(row);
+      }
+    });
+    if(any) container.appendChild(subjDiv);
+  });
+}
+
+/* ---------- SELECTION & CHECKLIST ---------- */
+const selectedArea = document.getElementById('selectedArea'); const selectedMeta = document.getElementById('selectedMeta');
+function selectChapter(subj, idx){ selected.subj = subj; selected.idx = idx; renderSelected(); }
+function renderSelected(){
+  if(!selected.subj) return;
+  const ch = state.subjects[selected.subj][selected.idx];
+  selectedMeta.textContent = `${selected.subj} — ${ch.name}`;
+  const html = document.createElement('div');
+  html.innerHTML = `
+<div style="display:flex;justify-content:space-between;align-items:center">
+  <div><div class="small">Progress</div><div style="font-weight:700;font-size:18px">${Math.round((Object.values(ch.tasks).filter(Boolean).length/5)*100)}% complete</div></div>
+  <div style="min-width:120px"><div class="small">Chapter donut</div><div style="width:120px;height:120px"><canvas id="chapterDonut"></canvas></div></div>
+</div>
+<div style="margin-top:12px">
+  <div class="small">Tasks</div>
+  <div class="tasks-grid" style="margin-top:8px">
+    <div class="task"><div>PYQs</div><input type="checkbox" ${ch.tasks.pyq?'checked':''} onchange="updateTask(this,'pyq')"></div>
+    <div class="task"><div>DPP</div><input type="checkbox" ${ch.tasks.dpp?'checked':''} onchange="updateTask(this,'dpp')"></div>
+    <div class="task"><div>Lectures</div><input type="checkbox" ${ch.tasks.lectures?'checked':''} onchange="updateTask(this,'lectures')"></div>
+    <div class="task"><div>Practice</div><input type="checkbox" ${ch.tasks.practice?'checked':''} onchange="updateTask(this,'practice')"></div>
+    <div class="task"><div>Notes</div><input type="checkbox" ${ch.tasks.notes?'checked':''} onchange="updateTask(this,'notes')"></div>
+  </div>
+</div>
+<div><div class="small">Notes</div><textarea id="notesArea">${ch.notes}</textarea><button class="savebtn" onclick="saveNotes()">Save Notes</button></div>
+`;
+selectedArea.innerHTML=''; selectedArea.appendChild(html);
+// smooth entry animation
+selectedArea.style.opacity = 0; selectedArea.style.transform='translateY(10px)';
+requestAnimationFrame(()=>{ selectedArea.style.transition='opacity .35s ease, transform .35s ease'; selectedArea.style.opacity=1; selectedArea.style.transform='translateY(0)'; });
+
+// render donut
+const donutCtx = document.getElementById('chapterDonut').getContext('2d'); const doneCount = Object.values(ch.tasks).filter(Boolean).length;
+if(window._chapterDonut) window._chapterDonut.destroy();
+window._chapterDonut = new Chart(donutCtx,{ type:'doughnut', data:{ labels:['Done','Left'], datasets:[{ data:[doneCount,5-doneCount], backgroundColor:[getColor('--ok'),getColor('--bad')] }] }, options:{ plugins:{legend:{display:false}}, maintainAspectRatio:false, animation:{animateRotate:true,animateScale:true,duration:400,easing:'easeOutQuart'} } });
+}
+function updateTask(checkbox,task){ const ch = state.subjects[selected.subj][selected.idx]; ch.tasks[task]=checkbox.checked; save(); renderAllSidebars(); renderSelected(); updateChapterBar(); updateOverall(); }
+function saveNotes(){ const ch = state.subjects[selected.subj][selected.idx]; ch.notes=document.getElementById('notesArea').value; save(); alert('Notes saved!'); }
+
+/* ---------- CHARTS ---------- */
+const class11Chart = new Chart(document.getElementById('class11Chart').getContext('2d'),{ type:'doughnut', data:{labels:['Done','Left'],datasets:[{data:[0,1],backgroundColor:[getColor('--ok'),getColor('--bad')]}]}, options:{plugins:{legend:{display:false}},animation:{duration:400,easing:'easeOutQuart'}}});
+const class12Chart = new Chart(document.getElementById('class12Chart').getContext('2d'),{ type:'doughnut', data:{labels:['Done','Left'],datasets:[{data:[0,1],backgroundColor:[getColor('--ok'),getColor('--bad')]}]}, options:{plugins:{legend:{display:false}},animation:{duration:400,easing:'easeOutQuart'}}});
+const chapterCtx = document.getElementById('chapterBar').getContext('2d');
+let charts={chapterBar:null};
+charts.chapterBar = new Chart(chapterCtx,{ type:'bar', data:{ labels:[], datasets:[{ label:'Progress (%)', data:[], backgroundColor:getColor('--accent') }] }, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{enabled:true,backgroundColor:'#0b1220',titleColor:getColor('--text'),bodyColor:getColor('--text'),padding:8,cornerRadius:6}}, scales:{x:{beginAtZero:true,max:100,ticks:{color:getColor('--text'),font:{weight:600}}},y:{ticks:{color:getColor('--text'),font:{weight:500}}}}, animation:{duration:600,easing:'easeOutQuart'} }});
+
+function updateChapterBar(){
+  const subj = document.getElementById('subjectSelect').value || Object.keys(state.subjects)[0];
+  const chs = state.subjects[subj] || [];
+  charts.chapterBar.data.labels = chs.map(c=>c.name).slice().reverse();
+  charts.chapterBar.data.datasets[0].data = chs.map(c=>Math.round((Object.values(c.tasks).filter(Boolean).length/5)*100)).slice().reverse();
+  charts.chapterBar.update();
+}
+
+/* ---------- SUBJECT SELECT ---------- */
+const subjectSelect = document.getElementById('subjectSelect');
+Object.keys(state.subjects).forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; subjectSelect.appendChild(o); });
+subjectSelect.addEventListener('change', updateChapterBar);
+
+/* ---------- OVERALL ---------- */
+function updateOverall(){
+  ['Class 11','Class 12'].forEach(cls=>{
+    const done = state.subjects[Object.keys(state.subjects).filter(s=>s.startsWith(cls))].flat().map(ch=>Object.values(ch.tasks).filter(Boolean).length).reduce((a,b)=>a+b,0);
+    const total = state.subjects[Object.keys(state.subjects).filter(s=>s.startsWith(cls))].flat().length*5;
+    const perc = total?Math.round((done/total)*100):0;
+    if(cls==='Class 11') class11Chart.data.datasets[0].data=[perc,100-perc],class11Chart.update();
+    else class12Chart.data.datasets[0].data=[perc,100-perc],class12Chart.update();
+  });
+  const overall = Math.round((
+    state.subjects['Class 11 Physics'].concat(state.subjects['Class 11 Chemistry'],state.subjects['Class 11 Mathematics'],
+    state.subjects['Class 12 Physics'],state.subjects['Class 12 Chemistry'],state.subjects['Class 12 Mathematics']).map(ch=>Object.values(ch.tasks).filter(Boolean).length).reduce((a,b)=>a+b,0)
+    / (SYLLABUS['Class 11 Physics'].length*5 + SYLLABUS['Class 11 Chemistry'].length*5 + SYLLABUS['Class 11 Mathematics'].length*5
+    + SYLLABUS['Class 12 Physics'].length*5 + SYLLABUS['Class 12 Chemistry'].length*5 + SYLLABUS['Class 12 Mathematics'].length*5) *100));
+  document.getElementById('overallPercent').textContent=overall+'% complete';
+}
+
+/* ---------- COUNTDOWN ---------- */
+const countdownEl = document.getElementById('countdown');
+function updateCountdown(){ 
+  const exam = new Date(document.getElementById('examSelect').value);
+  const now = new Date(); const diff = exam-now; const days=Math.floor(diff/(1000*60*60*24));
+  countdownEl.textContent=days>=0?days+' days':'0 days';
+}
+document.getElementById('examSelect').addEventListener('change',updateCountdown);
+
+/* ---------- UTILS ---------- */
+function getColor(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName) }
+renderAllSidebars(); updateChapterBar(); updateOverall(); updateCountdown();
+setInterval(updateCountdown,60000);
+</script>
+</body>
+</html>
